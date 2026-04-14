@@ -6,7 +6,7 @@ const { connectDB } = require('./src/common/config/database');
 const { initSocket } = require('./src/common/config/socket');
 const logger = require('./src/common/utils/logger');
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || `https://skillbridgefronend-two-three-oo0jq4q7e-om-bodke384s-projects.vercel.app`;
 
 const server = http.createServer(app);
 
