@@ -71,6 +71,16 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date().toISOString(), env: process.env.NODE_ENV });
 });
 
+
+app.get('/', (req, res) => {
+  res.status(200).json({ message: 'SkillBridge API is running' });
+});
+
+
+app.head('/', (req, res) => {
+  res.status(200).end();
+});
+
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use('/api/auth',             authRoutes);
 app.use('/api/users',            userRoutes);
