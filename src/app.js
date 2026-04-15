@@ -34,10 +34,10 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// ─── Rate Limiting ────────────────────────────────────────────────────────────
+// ---- Rate Limiting ----
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 300, // increased from 100 → 300
   message: { success: false, message: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -46,7 +46,7 @@ app.use('/api', limiter);
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 50, // increased from 20 → 50
   message: { success: false, message: 'Too many auth attempts, please try again later.' },
 });
 app.use('/api/auth/login', authLimiter);
