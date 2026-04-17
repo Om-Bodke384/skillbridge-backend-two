@@ -6,6 +6,7 @@ const compression = require('compression');
 const mongoSanitize = require('express-mongo-sanitize');
 const rateLimit = require('express-rate-limit');
 const hpp = require('hpp');
+const chatbotRoutes = require('./modules/chatbot/chatbot.routes');
 
 const authRoutes         = require('./modules/auth/auth.routes');
 const userRoutes         = require('./modules/users/user.routes');
@@ -94,6 +95,7 @@ app.use('/api/learning',         learningRoutes);
 app.use('/api/peer-reviews',     peerReviewRoutes);
 app.use('/api/peer-mentorship',  peerMentorshipRoutes);
 app.use('/api/admin',            adminRoutes);
+app.use('/api/chatbot', chatbotRoutes);
 
 // ─── Error Handling ───────────────────────────────────────────────────────────
 app.use(notFound);
