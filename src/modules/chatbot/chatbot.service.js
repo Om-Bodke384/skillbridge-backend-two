@@ -17,7 +17,7 @@ const getChatbotReply = async (message, history = []) => {
   ];
 
   const response = await client.chat.completions.create({
-    model: 'llama3-8b-8192',   // free model
+model: 'llama-3.3-70b-versatile',    // free model
     max_tokens: 1024,
     messages,
   });
