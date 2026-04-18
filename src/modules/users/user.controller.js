@@ -18,4 +18,14 @@ const searchUsers = asyncHandler(async (req, res) => {
   sendResponse(res, 200, result, 'Users retrieved');
 });
 
+
+const updateAvatar = asyncHandler(async (req, res) => {
+  if (!req.file) throw new ApiError(400, 'No image uploaded');
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    { avatar: req.file.path },
+    { new: true }
+  );
+  sendResponse(res, 200, user, 'Avatar updated');
+});
 module.exports = { getProfile, updateProfile, searchUsers };

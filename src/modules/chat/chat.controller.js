@@ -23,4 +23,9 @@ const reactToMessage = asyncHandler(async (req, res) => {
   sendResponse(res, 200, message, 'Reaction updated');
 });
 
-module.exports = { getMessages, sendMessage, deleteMessage, reactToMessage };
+const uploadImage = asyncHandler(async (req, res) => {
+  if (!req.file) throw new ApiError(400, 'No image uploaded');
+  sendResponse(res, 200, { url: req.file.path }, 'Image uploaded');
+});
+
+module.exports = { getMessages, sendMessage, deleteMessage, reactToMessage, uploadImage };

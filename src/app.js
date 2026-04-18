@@ -20,7 +20,8 @@ const learningRoutes     = require('./modules/learning/learning.routes');
 const peerReviewRoutes   = require('./modules/peer-review/peerReview.routes');
 const peerMentorshipRoutes = require('./modules/peer-mentorship/peerMentorship.routes');
 const adminRoutes        = require('./modules/admin/admin.routes');
-
+const liveRoutes   = require('./modules/live/live.routes');
+const courseRoutes = require('./modules/courses/course.routes');
 const { errorHandler } = require('./common/middleware/error.middleware');
 const { notFound }     = require('./common/middleware/notFound.middleware');
 
@@ -96,7 +97,8 @@ app.use('/api/peer-reviews',     peerReviewRoutes);
 app.use('/api/peer-mentorship',  peerMentorshipRoutes);
 app.use('/api/admin',            adminRoutes);
 app.use('/api/chatbot', chatbotRoutes);
-
+app.use('/api/live',    liveRoutes);
+app.use('/api/courses', courseRoutes);
 // ─── Error Handling ───────────────────────────────────────────────────────────
 app.use(notFound);
 app.use(errorHandler);
