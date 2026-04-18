@@ -2,7 +2,7 @@ const User = require('../auth/auth.model');  // ← correct path
 const userService = require('./user.service');
 const asyncHandler = require('../../common/utils/asyncHandler');
 const { sendResponse, ApiError } = require('../../common/utils/apiResponse');
-const { ApiError } = require('../../common/utils/apiResponse');
+
 
 const getProfile = asyncHandler(async (req, res) => {
   const user = await userService.getUserById(req.params.id);
