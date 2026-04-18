@@ -1,6 +1,8 @@
+const User = require('../auth/auth.model');  // ← correct path
 const userService = require('./user.service');
 const asyncHandler = require('../../common/utils/asyncHandler');
-const { sendResponse } = require('../../common/utils/apiResponse');
+const { sendResponse, ApiError } = require('../../common/utils/apiResponse');
+const { ApiError } = require('../../common/utils/apiResponse');
 
 const getProfile = asyncHandler(async (req, res) => {
   const user = await userService.getUserById(req.params.id);
@@ -18,7 +20,7 @@ const searchUsers = asyncHandler(async (req, res) => {
   sendResponse(res, 200, result, 'Users retrieved');
 });
 
-
+// ADD THIS FUNCTION
 const updateAvatar = asyncHandler(async (req, res) => {
   if (!req.file) throw new ApiError(400, 'No image uploaded');
   const user = await User.findByIdAndUpdate(
@@ -28,4 +30,6 @@ const updateAvatar = asyncHandler(async (req, res) => {
   );
   sendResponse(res, 200, user, 'Avatar updated');
 });
-module.exports = { getProfile, updateProfile, searchUsers };
+
+// ADD updateAvatar to exports
+module.exports = { getProfile, updateProfile, searchUsers, updateAvatar };
