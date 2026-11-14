@@ -65,8 +65,23 @@ const changePasswordSchema = Joi.object({
     .required(),
 });
 
+const TECH_DOMAINS = [
+  'Web Development', 'Mobile Development', 'Data Science', 'Machine Learning',
+  'DevOps', 'Cybersecurity', 'Blockchain', 'Cloud Computing', 'UI/UX Design', 'Other',
+];
+
+// role / techDomain are only used when a brand-new account is created via Google.
+const googleAuthSchema = Joi.object({
+  credential: Joi.string().required().messages({
+    'any.required': 'Google credential is required',
+  }),
+  role: Joi.string().valid('student', 'mentor').default('student'),
+  techDomain: Joi.string().valid(...TECH_DOMAINS).allow('', null).optional(),
+});
+
 module.exports = {
   registerSchema,
+  googleAuthSchema,
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
