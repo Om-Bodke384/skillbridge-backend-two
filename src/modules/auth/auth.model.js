@@ -21,10 +21,18 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, 'Password is required'],
+      // Google-only accounts have no password, so it is only required for local accounts.
+      required: [
+        function () { return !this.googleId; },
+        'Password is required',
+      ],
       minlength: [8, 'Password must be at least 8 characters'],
       select: false,
     },
+    // Google OAuth — additive fields only. `sparse` keeps the unique index happy for the
+    // existing users that don't have a googleId. Do NOT add a `default: null` here.
+    googleId: { type: String, unique: true, sparse: true },
+    authProvider: { type: String, enum: ['local', 'google'], default: 'local' },
     role: {
       type: String,
       enum: ['student', 'mentor', 'admin'],
@@ -80,6 +88,7 @@ const userSchema = new mongoose.Schema(
       transform(doc, ret) {
         delete ret.password;
         delete ret.refreshToken;
+        delete ret.googleId;
         delete ret.emailVerificationToken;
         delete ret.passwordResetToken;
         return ret;
@@ -90,13 +99,14 @@ const userSchema = new mongoose.Schema(
 
 // Hash password before saving
 userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
+  if (!this.isModified('password') || !this.password) return next();
   this.password = await bcrypt.hash(this.password, 10);
   next();
 });
 
 // Compare password
 userSchema.methods.comparePassword = async function (candidatePassword) {
+  if (!this.password) return false; // Google-only account
   return bcrypt.compare(candidatePassword, this.password);
 };
 

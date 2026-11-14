@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const jwt    = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
 const User   = require('./auth.model');
 const { ApiError } = require('../../common/utils/apiResponse');
 const { sendEmail } = require('../../common/config/email');
@@ -9,6 +10,20 @@ const {
   getVerifyEmailTemplate,
 } = require('../../common/utils/emailTemplates');
 const logger = require('../../common/utils/logger');
+
+const TECH_DOMAINS = [
+  'Web Development', 'Mobile Development', 'Data Science', 'Machine Learning',
+  'DevOps', 'Cybersecurity', 'Blockchain', 'Cloud Computing', 'UI/UX Design', 'Other',
+];
+
+let googleClient;
+const getGoogleClient = () => {
+  if (!process.env.GOOGLE_CLIENT_ID) {
+    throw new ApiError(503, 'Google sign-in is not configured on the server');
+  }
+  if (!googleClient) googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+  return googleClient;
+};
 
 // ─── Token helpers ────────────────────────────────────────────────────────────
 const generateTokens = (userId) => {
@@ -69,6 +84,14 @@ const login = async ({ email, password }) => {
   const user = await User.findOne({ email }).select('+password');
   if (!user) throw new ApiError(401, 'Invalid email or password');
 
+  // Account created through Google has no password
+  if (!user.password) {
+    throw new ApiError(
+      400,
+      'This account uses Google sign-in. Please click "Continue with Google", or use "Forgot password" to set a password.'
+    );
+  }
+
   const isMatch = await user.comparePassword(password);
   if (!isMatch) throw new ApiError(401, 'Invalid email or password');
 
@@ -80,6 +103,95 @@ const login = async ({ email, password }) => {
   await user.save({ validateBeforeSave: false });
 
   return { user, accessToken, refreshToken };
+};
+
+// ─── Google Sign-In / Sign-Up ─────────────────────────────────────────────────
+const googleLogin = async ({ credential, role, techDomain }) => {
+  // 1. Verify the ID token with Google (signature, expiry, audience)
+  let payload;
+  try {
+    const ticket = await getGoogleClient().verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    payload = ticket.getPayload();
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    logger.warn('Google token verification failed:', err.message);
+    throw new ApiError(401, 'Invalid Google sign-in. Please try again.');
+  }
+
+  if (!payload?.email || !payload.email_verified) {
+    throw new ApiError(401, 'Your Google email is not verified');
+  }
+
+  const email    = payload.email.toLowerCase().trim();
+  const googleId = payload.sub;
+
+  // 2. Find existing account — by googleId first, then by email (account linking)
+  let user = await User.findOne({ googleId });
+  let isNewUser = false;
+
+  if (!user) {
+    user = await User.findOne({ email });
+
+    if (user) {
+      // Link Google to the existing account. Nothing else about the user changes.
+      const wasUnverified = !user.isEmailVerified;
+      user.googleId = googleId;
+      if (!user.isEmailVerified) user.isEmailVerified = true; // Google already verified it
+      if (!user.avatar && payload.picture) user.avatar = payload.picture;
+
+      // Security: if the email was never verified, whoever registered it may not own it.
+      // Google just proved the real owner, so drop the unverified password and old sessions.
+      if (wasUnverified) {
+        await User.updateOne({ _id: user._id }, { $unset: { password: 1, refreshToken: 1 } });
+      }
+    }
+  }
+
+  if (user) {
+    if (!user.isActive) throw new ApiError(403, 'Account deactivated. Contact support.');
+  } else {
+    // 3. Brand-new user
+    let name = (payload.name || '').trim().slice(0, 50);
+    if (name.length < 2) name = email.split('@')[0].slice(0, 50).padEnd(2, '_');
+
+    try {
+      user = await User.create({
+        name,
+        email,
+        googleId,
+        authProvider: 'google',
+        isEmailVerified: true,
+        avatar: payload.picture || null,
+        role: role === 'mentor' ? 'mentor' : 'student', // never admin from this endpoint
+        techDomain: TECH_DOMAINS.includes(techDomain) ? techDomain : undefined,
+      });
+      isNewUser = true;
+    } catch (err) {
+      if (err.code !== 11000) throw err;
+      // Two simultaneous requests — the other one created it first
+      user = await User.findOne({ $or: [{ googleId }, { email }] });
+      if (!user) throw err;
+    }
+
+    if (isNewUser) {
+      sendEmailBackground({
+        to: user.email,
+        subject: 'Welcome to SkillBridge! 🚀',
+        html: getWelcomeEmailTemplate(user.name),
+      });
+    }
+  }
+
+  // 4. Issue the same tokens as normal login
+  user.lastSeen = new Date();
+  const { accessToken, refreshToken } = generateTokens(user._id);
+  user.refreshToken = refreshToken;
+  await user.save({ validateBeforeSave: false });
+
+  return { user, accessToken, refreshToken, isNewUser };
 };
 
 // ─── Refresh Token ────────────────────────────────────────────────────────────
@@ -159,6 +271,6 @@ const verifyEmail = async (token) => {
 };
 
 module.exports = {
-  register, login, refreshAccessToken,
+  register, login, googleLogin, refreshAccessToken,
   logout, forgotPassword, resetPassword, verifyEmail,
 };

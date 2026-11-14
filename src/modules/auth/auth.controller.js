@@ -18,6 +18,22 @@ const login = asyncHandler(async (req, res) => {
   sendResponse(res, 200, { user: result.user, accessToken: result.accessToken }, 'Login successful');
 });
 
+const googleAuth = asyncHandler(async (req, res) => {
+  const result = await authService.googleLogin(req.body);
+  res.cookie('refreshToken', result.refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+  sendResponse(
+    res,
+    result.isNewUser ? 201 : 200,
+    { user: result.user, accessToken: result.accessToken, isNewUser: result.isNewUser },
+    result.isNewUser ? 'Account created with Google' : 'Login successful'
+  );
+});
+
 const refreshToken = asyncHandler(async (req, res) => {
   const token = req.cookies?.refreshToken || req.body.refreshToken;
   const result = await authService.refreshAccessToken(token);
@@ -55,4 +71,4 @@ const getMe = asyncHandler(async (req, res) => {
   sendResponse(res, 200, req.user, 'Current user retrieved');
 });
 
-module.exports = { register, login, refreshToken, logout, forgotPassword, resetPassword, verifyEmail, getMe };
+module.exports = { register, login, googleAuth, refreshToken, logout, forgotPassword, resetPassword, verifyEmail, getMe };
