@@ -40,7 +40,7 @@ const getChatbotReply = async (message, history = []) => {
   ];
 
   const response = await client.chat.completions.create({
-model: 'llama-3.3-70b-versatile',    // free model
+    model: process.env.GROQ_MODEL || 'openai/gpt-oss-120b',    // free model
     max_tokens: 1024,
     messages,
   });
